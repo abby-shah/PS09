@@ -1,6 +1,6 @@
 ---
 title: "STAT/MATH 495: Problem Set 09"
-author: "WRITE YOUR NAME(S) HERE"
+author: "Syed Abbas Shah"
 date: "2017-11-07"
 output:
   html_document:
@@ -19,6 +19,7 @@ knitr::opts_chunk$set(
 set.seed(76)
 
 library(tidyverse)
+library(gridExtra)
 ```
 
 
@@ -27,36 +28,81 @@ library(tidyverse)
 
 Please indicate who you collaborated with on this assignment: 
 
-
+No One
 
 # Question 1: Run k-means
 
-```{r}
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 observations_1 <- read_csv("data/observations_1.csv")
 observations_2 <- read_csv("data/observations_2.csv")
 
 # Set observations to be one of two datasets
-observations <- observations_2
+observations <- observations_1
+# Fit model for k=2
+k <- 2
+```
 
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#OBSERVATIONS 1, PLOT 1
+set.seed(6)
+observations <- observations_1
 # Fit model for k=2
 k <- 2
 k_means_results <- kmeans(observations, centers=k)
 clusters <- k_means_results$cluster
 cluster_centers <- k_means_results$centers
-
 # Add cluster results to observations. Note we convert to factor since cluster
 # ID's should be treated as categorical
 observations$cluster <- as.factor(clusters)
-
 # Add cluster ID's to cluster_centers
 cluster_centers <- cluster_centers %>% 
   as_tibble() %>% 
   mutate(cluster=as.factor(1:k))
-
-ggplot(NULL, aes(x=x1, y=x2, col=cluster)) +
+plot1<-ggplot(NULL, aes(x=x1, y=x2, col=cluster)) +
   geom_point(data=observations) +
   geom_point(data=cluster_centers, size=5)
 ```
+
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+#OBSERVATIONS 1, PLOT 2
+set.seed(13)
+observations <- observations_1
+k <- 2
+k_means_results <- kmeans(observations, centers=k)
+clusters <- k_means_results$cluster
+cluster_centers <- k_means_results$centers
+observations$cluster <- as.factor(clusters)
+cluster_centers <- cluster_centers %>% 
+  as_tibble() %>% 
+  mutate(cluster=as.factor(1:k))
+plot2<-ggplot(NULL, aes(x=x1, y=x2, col=cluster)) +
+  geom_point(data=observations) +
+  geom_point(data=cluster_centers, size=5)
+
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+# CODE FOR OBSERVSTIONS_2
+set.seed(113)
+observations <- observations_2
+k <- 2
+k_means_results <- kmeans(observations, centers=k)
+clusters <- k_means_results$cluster
+cluster_centers <- k_means_results$centers
+observations$cluster <- as.factor(clusters)
+cluster_centers <- cluster_centers %>% 
+  as_tibble() %>% 
+  mutate(cluster=as.factor(1:k))
+plot3<-ggplot(NULL, aes(x=x1, y=x2, col=cluster)) +
+  geom_point(data=observations) +
+  geom_point(data=cluster_centers, size=5)
+```
+
+
+
 
 **Questions**:
 
@@ -64,7 +110,7 @@ ggplot(NULL, aes(x=x1, y=x2, col=cluster)) +
 results.
 1. Speculate on the root cause of any consistency or inconsistency in the
 results.
-1. Run KMC 10 times on `observations_2` and comment on the consistentcy of the
+1. Run KMC 10 times on `observations_2` and comment on the consistency of the
 results.
 1. Speculate on the root cause of any consistency or inconsistency in the
 results.
@@ -72,9 +118,29 @@ results.
 **Answers**:
 
 1.
+The results are fairly inconsistent. The cluster center changes location frequently, and the cluster assignments vary considerably. Sometimes, there are pretty dramatic variations such that the data go from being split horizontally to being split vertically. I've attached an example of one dramatic variation:
+
+```{r}
+grid.arrange(plot1,plot2, ncol=2)
+```
+As we can see, the cluster centers are in noticeably different positions, given the different assignment of clusters to data points. In one case, there is a horizontal partition, while in the second, there is a vertical one.
+
 1.
+
+We are attempting to find two reasonably distinctive groups in the dataset. However, since the divisions between the points aren't necessarily super clear and there is substantial overlap, it becomes hard to figure out whether the points in the middle are dissimilar to one another (and harder to figure out which cluster they belong to). Thus, cluster assignment in such unclear settings can be fairly arbitrary.
+
 1.
-1.
+
+The results are pretty consistent. Running the code many times doesn't change the general identification of two distinct clusters roughly separated across the diagonal $y = 2 - x$.
+
+```{r}
+plot3
+```
+
+1. 
+
+The data are more cleanly partitioned in observations 2, with a diagonal line separating two discernable groups. Since we have, by setting K=2, told the algorithm to find two groups such that within group similarity and between group dissimilarity are high, assigning data points into clusters across the diagonal makes sense.
+
 
 
 
@@ -84,6 +150,71 @@ Read ISLR page 388 Algorithm 10.1 and implement k-means clustering from scratch.
 Don't worry about doing it for general $k$; keep it simple and do it for $k=2$
 specifically. Apply it to `observations_2` from above.
 
+General Algorithm:
+
+1) Randomly Assign every observation to either cluster 1 or 2
+2) Compute cluster center
+3) Reassign every observation to either cluster 1 or 2 based on :
+   i) if distance b/w point and cluster 1 center is smaller than distance b/w point and cluster 2 center, assign point to cluster 1
+  ii) otherwise assign point to cluster 2
+  
+4) Repeat until results don't change i.e. until a local optimum is reached.
+
+
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+observations<-observations_2
+
+cluster<-sample(1:2, nrow(observations),replace=TRUE) #randomly assign clusters
+initial<-data.frame(observations,cluster)
+cent1<- initial %>% 
+  group_by(cluster) %>% 
+  summarize(mean(x1), mean (x2)) #get the mean values for each cluster
+clustercenters<- cent1[2:3]
+
+distance_matrix <- proxy::dist(x=observations, y=clustercenters) #Find distance b/w each point and both cluster centers
+
+observations$cluster <- as.factor(cluster)
+
+cluster_centers <- clustercenters %>% 
+  as_tibble() %>% 
+  mutate(cluster=as.factor(1:k))
+cluster_centers<-cluster_centers %>% 
+  rename(x1=`mean(x1)`, x2 =`mean(x2)`)
+
+plot4<-ggplot(NULL, aes(x=x1, y=x2, col=cluster)) +
+geom_point(data=observations) +
+ geom_point(data=cluster_centers, size=5)
+plot4
+
+cluster<-apply(distance_matrix, 1, which.min) #Find which cluster center each value is closest to.
+observations<-data.frame(observations,cluster) #reassign clusters
+observations <- observations[,-3]
+
+cent2<- observations %>% 
+  group_by(cluster.1) %>% 
+  summarize(mean(x1), mean (x2)) #get the mean values for each cluster
+clustercenters<- cent2[2:3]
+
+observations$cluster <- as.factor(cluster)
+cluster_centers <- clustercenters %>% 
+  as_tibble() %>% 
+  mutate(cluster=as.factor(1:k))
+cluster_centers<-cluster_centers %>% 
+  rename(x1=`mean(x1)`, x2 =`mean(x2)`)
+
+plot5<-ggplot(NULL, aes(x=x1, y=x2, col=cluster)) +
+          geom_point(data=observations) +
+        geom_point(data=cluster_centers, size=5)
+
+plot5
+
+```
+
+
+We can see how, in just two iterations, the algorithm creates two reasonably distinct clusters in Observations_2.
+
+##Hint
 ```{r}
 # Hint:
 library(proxy)
@@ -95,7 +226,15 @@ B <- data_frame(
   x1 = c(1, 0),
   x2 = c(1, 0)
 )
+A
+B
 distance_matrix <- proxy::dist(x=A, y=B)
 distance_matrix
+
 apply(distance_matrix, 1, which.min)
 ```
+
+
+
+
+
