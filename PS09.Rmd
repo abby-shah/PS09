@@ -127,7 +127,7 @@ As we can see, the cluster centers are in noticeably different positions, given 
 
 1.
 
-We are attempting to find two reasonably distinctive groups in the dataset. However, since the divisions between the points aren't necessarily super clear and there is substantial overlap, it becomes hard to figure out whether the points in the middle are dissimilar to one another (and harder to figure out which cluster they belong to). Thus, cluster assignment in such unclear settings can be fairly arbitrary.
+We are attempting to find two reasonably distinctive groups in the dataset. However, since the divisions between the points aren't necessarily super clear and there is substantial overlap, it becomes hard to figure out whether the points in the middle are dissimilar to one another (and harder to figure out which cluster they belong to). Thus, cluster assignment in such unclear settings can be fairly arbitrary. The random cluster assignment at the start has an impact here, as the local optimum attained after multiple iterations of the algorithm (in each trial) will differ when the initial assignment changes (given the overlap/unclear distinction in the dataset). So the initial assignment in each run of the algorithm affects the identification of clusters, contributing to the inconsistency. 
 
 1.
 
@@ -139,8 +139,7 @@ plot3
 
 1. 
 
-The data are more cleanly partitioned in observations 2, with a diagonal line separating two discernable groups. Since we have, by setting K=2, told the algorithm to find two groups such that within group similarity and between group dissimilarity are high, assigning data points into clusters across the diagonal makes sense.
-
+The data are more cleanly partitioned in observations 2, with a diagonal line separating two discernible groups. Since we have, by setting K=2, told the algorithm to find two groups such that within group similarity and between group dissimilarity are high, assigning data points into clusters across the diagonal makes sense. The random assignment at the start doesn't have a great impact here, as the local optimum attained after multiple iterations of the algorithm in each trial will eventually end up partitioning the two clusters in the same way. This is because, as noted earlier, the dataset has two noticeably partitioned groups.
 
 
 
